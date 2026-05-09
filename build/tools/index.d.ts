@@ -1,0 +1,67 @@
+import { Tool } from '@modelcontextprotocol/sdk/types.js';
+export declare const createContactTool: Tool;
+export declare const getContactTool: Tool;
+export declare const listContactsTool: Tool;
+export declare const getLatestContactsTool: Tool;
+export declare const updateContactTool: Tool;
+export declare const createDealTool: Tool;
+export declare const getDealTool: Tool;
+export declare const listDealsTool: Tool;
+export declare const updateDealTool: Tool;
+export declare const getLatestDealsTool: Tool;
+export declare const getDealsFromDateRangeTool: Tool;
+export declare const createLeadTool: Tool;
+export declare const getLeadTool: Tool;
+export declare const listLeadsTool: Tool;
+export declare const getLatestLeadsTool: Tool;
+export declare const getLeadsFromDateRangeTool: Tool;
+export declare const updateLeadTool: Tool;
+export declare const createCompanyTool: Tool;
+export declare const getCompanyTool: Tool;
+export declare const listCompaniesTool: Tool;
+export declare const updateCompanyTool: Tool;
+export declare const getLatestCompaniesTool: Tool;
+export declare const getCompaniesFromDateRangeTool: Tool;
+export declare const searchCRMTool: Tool;
+export declare const validateWebhookTool: Tool;
+export declare const diagnosePermissionsTool: Tool;
+export declare const checkCRMSettingsTool: Tool;
+export declare const testLeadsAPITool: Tool;
+export declare const getDealPipelinesTool: Tool;
+export declare const getDealStagesTool: Tool;
+export declare const filterDealsByPipelineTool: Tool;
+export declare const filterDealsByBudgetTool: Tool;
+export declare const filterDealsByStatusTool: Tool;
+export declare const monitorUserActivitiesTool: Tool;
+export declare const getUserPerformanceSummaryTool: Tool;
+export declare const analyzeAccountPerformanceTool: Tool;
+export declare const compareUserPerformanceTool: Tool;
+export declare const trackDealProgressionTool: Tool;
+export declare const monitorSalesActivitiesTool: Tool;
+export declare const generateSalesReportTool: Tool;
+export declare const getTeamDashboardTool: Tool;
+export declare const analyzeCustomerEngagementTool: Tool;
+export declare const forecastPerformanceTool: Tool;
+export declare const getUserTool: Tool;
+export declare const getAllUsersTool: Tool;
+export declare const resolveUserNamesTool: Tool;
+export declare const getContactsWithUserNamesTool: Tool;
+export declare const getDealsWithUserNamesTool: Tool;
+export declare const getLeadsWithUserNamesTool: Tool;
+export declare const getCompaniesWithUserNamesTool: Tool;
+export declare const allTools: import("zod").objectOutputType<{
+    name: import("zod").ZodString;
+    description: import("zod").ZodOptional<import("zod").ZodString>;
+    inputSchema: import("zod").ZodObject<{
+        type: import("zod").ZodLiteral<"object">;
+        properties: import("zod").ZodOptional<import("zod").ZodObject<{}, "passthrough", import("zod").ZodTypeAny, import("zod").objectOutputType<{}, import("zod").ZodTypeAny, "passthrough">, import("zod").objectInputType<{}, import("zod").ZodTypeAny, "passthrough">>>;
+    }, "passthrough", import("zod").ZodTypeAny, import("zod").objectOutputType<{
+        type: import("zod").ZodLiteral<"object">;
+        properties: import("zod").ZodOptional<import("zod").ZodObject<{}, "passthrough", import("zod").ZodTypeAny, import("zod").objectOutputType<{}, import("zod").ZodTypeAny, "passthrough">, import("zod").objectInputType<{}, import("zod").ZodTypeAny, "passthrough">>>;
+    }, import("zod").ZodTypeAny, "passthrough">, import("zod").objectInputType<{
+        type: import("zod").ZodLiteral<"object">;
+        properties: import("zod").ZodOptional<import("zod").ZodObject<{}, "passthrough", import("zod").ZodTypeAny, import("zod").objectOutputType<{}, import("zod").ZodTypeAny, "passthrough">, import("zod").objectInputType<{}, import("zod").ZodTypeAny, "passthrough">>>;
+    }, import("zod").ZodTypeAny, "passthrough">>;
+}, import("zod").ZodTypeAny, "passthrough">[];
+export declare function executeToolCall(name: string, args: any): Promise<any>;
+//# sourceMappingURL=index.d.ts.map

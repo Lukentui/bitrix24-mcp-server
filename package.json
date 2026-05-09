@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Bitrix24 MCP Server for AI Agent Integration",
-  "main": "server.js",
+  "main": "build/index.js",
   "bin": {
+    "bitrix24-mcp-server": "./build/index.js",
     "bitrix24-mcp": "./build/index.js"
   },
   "scripts": {
@@ -12,16 +13,18 @@
     "build": "tsc",
     "build:unix": "tsc && chmod +x build/index.js",
     "dev": "tsc --watch",
-    "start": "node server.js",
+    "start": "node build/index.js",
     "test": "node test/integration.test.js",
-    "postinstall": "node -e \"try { require('child_process').execSync('npm run build', {stdio: 'inherit'}); } catch(e) { console.log('Build failed, but continuing...'); }\"",
-    "azure:start": "node server.js"
+    "azure:start": "node build/index.js"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
-  "files": ["build"],
+  "files": [
+    "build",
+    "README.md"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.4.0",
     "zod": "^3.22.4",
@@ -33,6 +36,6 @@
     "@types/node-fetch": "^2.6.9"
   },
   "keywords": ["mcp", "bitrix24", "crm", "ai", "automation"],
-  "author": "Your Name",
+  "author": "Lukentui",
   "license": "MIT"
 }

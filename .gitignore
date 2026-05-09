@@ -5,7 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build output
-build/
+# build/ is intentionally tracked for npx usage
 dist/
 
 # Environment variables
