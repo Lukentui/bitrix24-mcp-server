@@ -1,0 +1,15 @@
+{
+  "name": "bitrix24-skill",
+  "version": "1.1.0",
+  "description": "CLI utility for interacting with Bitrix24 via incoming webhook. Updated to use axios for HTTP requests and commander for argument parsing.",
+  "main": "index.js",
+  "bin": {
+    "bitrix24-skill": "index.js"
+  },
+  "type": "commonjs",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.5.0",
+    "commander": "^11.0.0"
+  }
+}
