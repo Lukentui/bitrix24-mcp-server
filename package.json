@@ -1,7 +1,7 @@
 {
-  "name": "bitrix24-skill",
-  "version": "1.1.0",
-  "description": "CLI utility for interacting with Bitrix24 via incoming webhook. Updated to use axios for HTTP requests and commander for argument parsing.",
+  "name": "@x0333/bitrix24-mcp-server",
+  "version": "2.0.1",
+  "description": "Bitrix24 MCP Server for AI Agent Integration.",
   "main": "index.js",
   "bin": {
     "bitrix24-skill": "index.js"
@@ -11,5 +11,17 @@
   "dependencies": {
     "axios": "^1.5.0",
     "commander": "^11.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "bitrix24",
+    "crm",
+    "ai",
+    "automation"
+  ],
+  "author": "Lukentui",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
   }
 }
