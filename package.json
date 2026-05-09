@@ -1,16 +1,16 @@
 {
   "name": "@x0333/bitrix24-mcp-server",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Bitrix24 MCP Server for AI Agent Integration.",
   "main": "index.js",
   "bin": {
-    "bitrix24-skill": "index.js"
+    "bitrix24-mcp": "index.js"
   },
   "type": "commonjs",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.5.0",
-    "commander": "^11.0.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "axios": "^1.5.0"
   },
   "keywords": [
     "mcp",
@@ -20,7 +20,6 @@
     "automation"
   ],
   "author": "Lukentui",
-  "license": "MIT",
   "publishConfig": {
     "access": "public"
   }
