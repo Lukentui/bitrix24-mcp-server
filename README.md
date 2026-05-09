@@ -15,7 +15,11 @@ This is a Model Context Protocol (MCP) server that provides tools for interactin
 You can run this server directly using `npx`:
 
 ```bash
+# To start the MCP server (default)
 npx -y @x0333/bitrix24-mcp-server
+
+# To call a specific tool via CLI (example)
+npx -y @x0333/bitrix24-mcp-server get_profile
 ```
 
 ## Configuration
