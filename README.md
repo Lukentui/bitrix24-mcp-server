@@ -1,34 +1,46 @@
 # Bitrix24 MCP Server
 
-This is a Model Context Protocol (MCP) server that provides tools for interacting with Bitrix24 via incoming webhooks. It allows AI agents (like Manus, Claude Desktop, etc.) to manage tasks, search for groups, and view user profiles.
+MCP-сервер для работы с Bitrix24 через входящий вебхук.
 
-## Features
+Он позволяет подключить Bitrix24 к MCP-совместимым AI-клиентам, например Manus, Claude Desktop и другим инструментам, которые умеют работать с Model Context Protocol.
 
-- **get_profile**: Fetch current user profile information.
-- **get_task**: Retrieve detailed information about a specific task by ID.
-- **search_tasks**: Search for tasks by title with sorting and pagination.
-- **get_group**: Get detailed information about a workgroup or project.
-- **search_groups**: Search for workgroups or projects by name.
+Сервер ходит в REST API Bitrix24 через webhook URL и отдаёт данные в формате, удобном для AI-агента.
 
-## Installation
+## Что умеет
 
-You can run this server directly using `npx`:
+Сейчас сервер предоставляет такие инструменты:
+
+- **get_profile** — получить профиль текущего пользователя Bitrix24.
+- **get_task** — получить подробную информацию о задаче по её ID.
+- **search_tasks** — найти задачи по названию. Поддерживает сортировку и пагинацию.
+- **get_group** — получить подробную информацию о рабочей группе или проекте.
+- **search_groups** — найти рабочие группы или проекты по названию.
+
+## Установка и запуск
+
+Пакет можно запускать напрямую через `npx`:
 
 ```bash
-# To start the MCP server (default)
 npx -y @x0333/bitrix24-mcp-server
-
-# To call a specific tool via CLI (example)
-npx -y @x0333/bitrix24-mcp-server get_profile
 ```
 
-## Configuration
+Для работы нужно передать переменную окружения `B24_BASE`.
 
-The server requires a Bitrix24 incoming webhook URL. You must set the `B24_BASE` environment variable.
+Это базовый URL входящего вебхука Bitrix24:
 
-### Example for Manus / Claude Desktop
+```bash
+B24_BASE="https://your-domain.bitrix24.ru/rest/USER_ID/WEBHOOK_CODE/"
+```
 
-Add this to your configuration:
+Пример запуска:
+
+```bash
+B24_BASE="https://your-domain.bitrix24.ru/rest/USER_ID/WEBHOOK_CODE/" npx -y @x0333/bitrix24-mcp-server
+```
+
+## Конфигурация для Manus / Claude Desktop
+
+Пример MCP-конфига:
 
 ```json
 {
@@ -44,12 +56,66 @@ Add this to your configuration:
 }
 ```
 
-## How to get Webhook URL
+После этого AI-клиент сможет вызывать инструменты сервера и получать данные из Bitrix24.
 
-1. Go to your Bitrix24 portal.
-2. Navigate to **Developer Resources** -> **Other** -> **Inbound Webhook**.
-3. Select the required permissions (Tasks, Social Network, User).
-4. Copy the **URL for REST API call** (it should look like `https://domain.bitrix24.ru/rest/1/abcdef12345/`).
+## Как получить Webhook URL в Bitrix24
+
+1. Откройте свой портал Bitrix24.
+2. Перейдите в раздел **Разработчикам** / **Developer Resources**.
+3. Создайте **Входящий вебхук** / **Inbound Webhook**.
+4. Выдайте вебхуку нужные права:
+   - задачи;
+   - рабочие группы / проекты;
+   - пользователи.
+5. Скопируйте **URL для вызова REST API**.
+
+Обычно он выглядит примерно так:
+
+```text
+https://domain.bitrix24.ru/rest/1/abcdef12345/
+```
+
+Именно этот URL нужно передать в переменную `B24_BASE`.
+
+## Разработка
+
+В проекте используется `pnpm`.
+
+Установить зависимости:
+
+```bash
+pnpm install
+```
+
+Запустить сервер локально:
+
+```bash
+B24_BASE="https://your-domain.bitrix24.ru/rest/USER_ID/WEBHOOK_CODE/" node index.js
+```
+
+Сервер работает через `stdio`, поэтому обычно его запускают не напрямую из терминала, а из MCP-клиента.
+
+Для локальной проверки можно указать путь к проекту в конфиге MCP-клиента и запускать `node index.js`:
+
+```json
+{
+  "mcpServers": {
+    "bitrix24-local": {
+      "command": "node",
+      "args": ["/path/to/bitrix24-mcp-server/index.js"],
+      "env": {
+        "B24_BASE": "https://your-domain.bitrix24.ru/rest/USER_ID/WEBHOOK_CODE/"
+      }
+    }
+  }
+}
+```
+
+## Переменные окружения
+
+| Переменная | Обязательная | Описание |
+|---|---:|---|
+| `B24_BASE` | Да | Базовый URL входящего вебхука Bitrix24. |
 
 ## License
 
