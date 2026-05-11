@@ -109,7 +109,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             name: { type: "string", description: "Substring of the group name to search for" },
-            start: { type: "number", description: "Pagination offset (default: 0)" },
           },
           required: ["name"],
         },
@@ -186,17 +185,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "search_groups": {
         const body = {
-          filter: { "%NAME": args.name },
-          order: { ID: "DESC" },
-          start: args.start || 0,
+          FILTER: { "%NAME": args.name },
         };
-        const data = await callBitrix("socialnetwork.api.workgroup.list", body);
+        const data = await callBitrix("sonet_group.get.json", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_group": {
-        const body = { params: { groupId: args.id } };
-        const data = await callBitrix("socialnetwork.api.workgroup.get", body);
+        const body = { FILTER: { ID: args.id } };
+        const data = await callBitrix("sonet_group.get.json", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
