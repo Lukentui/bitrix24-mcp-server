@@ -86,16 +86,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "search_tasks",
-        description: "Search for tasks by title in Bitrix24",
+        description:
+          "Search tasks in Bitrix24: by title substring (%TITLE), by Kanban stage id (filter STAGE_ID), or both.",
         inputSchema: {
           type: "object",
           properties: {
             title: { type: "string", description: "Substring of the task title to search for" },
+            stage_id: {
+              type: "number",
+              description: "Kanban stage ID (tasks.task.list filter STAGE_ID)",
+            },
             order: { type: "string", description: "Field to sort by (default: 'ID')" },
             dir: { type: "string", enum: ["asc", "desc"], description: "Sort direction (default: 'desc')" },
             start: { type: "number", description: "Pagination offset (default: 0)" },
           },
-          required: ["title"],
         },
       },
       {
@@ -117,6 +121,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             id: { type: "number", description: "The unique ID of the group" },
+          },
+          required: ["id"],
+        },
+      },
+      {
+        name: "get_kanban_stages_by_group",
+        description:
+          "Get task Kanban stages for a workgroup or project (task.stages.get). entityId is the group ID.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "number", description: "The unique ID of the group (entityId for task kanban)" },
           },
           required: ["id"],
         },
@@ -145,10 +161,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "search_tasks": {
+        const hasTitle = args.title != null && String(args.title).trim() !== "";
+        const hasStage =
+          args.stage_id !== undefined && args.stage_id !== null && !Number.isNaN(Number(args.stage_id));
+        if (!hasTitle && !hasStage) {
+          throw new Error("search_tasks requires at least one of: title, stage_id");
+        }
+        const filter = {};
+        if (hasTitle) {
+          filter["%TITLE"] = args.title;
+        }
+        if (hasStage) {
+          filter.STAGE_ID = Number(args.stage_id);
+        }
         const body = {
           order: { [args.order || "ID"]: (args.dir || "desc").toUpperCase() },
-          filter: { "%TITLE": args.title },
-          select: ["ID", "TITLE", "STATUS", "RESPONSIBLE_ID", "GROUP_ID"],
+          filter,
+          select: ["ID", "TITLE", "STATUS", "RESPONSIBLE_ID", "GROUP_ID", "STAGE_ID"],
           start: args.start || 0,
         };
         const data = await callBitrix("tasks.task.list", body);
@@ -168,6 +197,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_group": {
         const body = { params: { groupId: args.id } };
         const data = await callBitrix("socialnetwork.api.workgroup.get", body);
+        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      }
+
+      case "get_kanban_stages_by_group": {
+        const body = { entityId: args.id };
+        const data = await callBitrix("task.stages.get", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
