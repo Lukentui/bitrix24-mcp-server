@@ -27,7 +27,7 @@ if (!B24_BASE) {
 const server = new Server(
   {
     name: "bitrix24-mcp-server",
-    version: "2.1.0",
+    version: "2.2.0",
   },
   {
     capabilities: {
