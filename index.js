@@ -41,13 +41,14 @@ if (!B24_PORTAL_URL) {
 }
 
 const taskViewUrlPrefix = `${B24_PORTAL_URL}/company/personal/user/0/tasks/task/view/`;
-const mcpInstructions =
-  `Bitrix24 address: ${B24_PORTAL_URL}. When the user needs a link to a task (or to paste one), use ${taskViewUrlPrefix}<task-id>/ — substitute only <task-id> with the numeric task ID from the API. Example: ${taskViewUrlPrefix}9483/`;
+const taskPortalLinkHowto =
+  `When the user needs a link to a task (or to paste one), use ${taskViewUrlPrefix}<task-id>/ — substitute only <task-id> with the numeric task ID from the API. Example: ${taskViewUrlPrefix}9483/`;
+const mcpInstructions = `Bitrix24 address: ${B24_PORTAL_URL}. ${taskPortalLinkHowto}`;
 
 const server = new Server(
   {
     name: "bitrix24-mcp-server",
-    version: "2.3.2",
+    version: "2.3.3",
   },
   {
     capabilities: {
@@ -145,7 +146,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "get_task",
-        description: "Retrieve task details by ID from Bitrix24",
+        description:
+          "Retrieve task details by ID from Bitrix24. " +
+          taskPortalLinkHowto +
+          " The tool response JSON includes agent_instructions with the same rule plus a direct link for the requested task id.",
         inputSchema: {
           type: "object",
           properties: {
@@ -260,9 +264,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_task": {
+        const taskId = Number(args.id);
         const body = { taskId: args.id, select: args.select || ["*"] };
         const data = await callBitrix("tasks.task.get", body);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        throwIfBitrixError(data, "tasks.task.get");
+        const payload = {
+          ...data,
+          agent_instructions: `${taskPortalLinkHowto} For this task: ${taskViewUrlPrefix}${taskId}/`,
+        };
+        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
       }
 
       case "search_tasks": {
