@@ -35,14 +35,19 @@ function bitrixPortalUrlFromBase(base) {
 }
 
 const B24_PORTAL_URL = bitrixPortalUrlFromBase(B24_BASE);
-const mcpInstructions = B24_PORTAL_URL
-  ? `Bitrix24 address: ${B24_PORTAL_URL}`
-  : "Bitrix24 address: take scheme and host from B24_BASE (the part before /rest/ in the webhook URL).";
+if (!B24_PORTAL_URL) {
+  console.error("Error: B24_BASE must be a valid absolute URL with a host (e.g., https://domain.bitrix24.ru/rest/1/abcde/).");
+  process.exit(1);
+}
+
+const taskViewUrlPrefix = `${B24_PORTAL_URL}/company/personal/user/0/tasks/task/view/`;
+const mcpInstructions =
+  `Bitrix24 address: ${B24_PORTAL_URL}. When the user needs a link to a task (or to paste one), use ${taskViewUrlPrefix}<task-id>/ — substitute only <task-id> with the numeric task ID from the API. Example: ${taskViewUrlPrefix}9483/`;
 
 const server = new Server(
   {
     name: "bitrix24-mcp-server",
-    version: "2.3.0",
+    version: "2.3.2",
   },
   {
     capabilities: {
