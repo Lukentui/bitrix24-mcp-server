@@ -24,6 +24,21 @@ if (!B24_BASE) {
   process.exit(1);
 }
 
+function bitrixPortalUrlFromBase(base) {
+  try {
+    const u = new URL(String(base).trim());
+    if (!u.host) return null;
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return null;
+  }
+}
+
+const B24_PORTAL_URL = bitrixPortalUrlFromBase(B24_BASE);
+const mcpInstructions = B24_PORTAL_URL
+  ? `Bitrix24 address: ${B24_PORTAL_URL}`
+  : "Bitrix24 address: take scheme and host from B24_BASE (the part before /rest/ in the webhook URL).";
+
 const server = new Server(
   {
     name: "bitrix24-mcp-server",
@@ -33,6 +48,7 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
+    instructions: mcpInstructions,
   }
 );
 
