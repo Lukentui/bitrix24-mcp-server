@@ -1,13 +1,11 @@
 #!/usr/bin/env node
-"use strict";
-
-const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
-const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
-const {
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} = require("@modelcontextprotocol/sdk/types.js");
-const axios = require("axios");
+} from "@modelcontextprotocol/sdk/types.js";
+import axios from "axios";
 
 /**
  * Bitrix24 MCP Server
@@ -24,7 +22,7 @@ if (!B24_BASE) {
   process.exit(1);
 }
 
-function bitrixPortalUrlFromBase(base) {
+function bitrixPortalUrlFromBase(base: string): string | null {
   try {
     const u = new URL(String(base).trim());
     if (!u.host) return null;
@@ -62,8 +60,8 @@ const server = new Server(
  * If B24_BASE is legacy .../rest/{user}/{webhook}/ (without /api/), new task fields
  * like chatId are returned from .../rest/api/{user}/{webhook}/ only.
  */
-function bitrixRestApiBaseFromLegacy() {
-  const b = B24_BASE.replace(/\/$/, "");
+function bitrixRestApiBaseFromLegacy(): string | null {
+  const b = B24_BASE!.replace(/\/$/, "");
   if (/\/rest\/api\//.test(b)) return null;
   if (/\/rest\/\d+\//.test(b)) return b.replace("/rest/", "/rest/api/");
   return null;
@@ -73,14 +71,14 @@ function bitrixRestApiBaseFromLegacy() {
  * Helper to call Bitrix24 REST API
  * @param {string} [baseUrl] — override base (e.g. rest/api for tasks.task.get)
  */
-async function callBitrix(method, body, baseUrl) {
-  const url = `${(baseUrl || B24_BASE).replace(/\/$/, "")}/${method}`;
+async function callBitrix(method: string, body: any, baseUrl?: string): Promise<any> {
+  const url = `${(baseUrl || B24_BASE!).replace(/\/$/, "")}/${method}`;
   try {
     const response = await axios.post(url, body, {
       headers: { "Content-Type": "application/json" },
     });
     return response.data;
-  } catch (err) {
+  } catch (err: any) {
     const msg = err.response
       ? `HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`
       : err.message;
@@ -90,19 +88,19 @@ async function callBitrix(method, body, baseUrl) {
 
 const IM_MESSAGES_LIMIT_MAX = 50;
 
-function pickTaskItem(taskGetResult) {
+function pickTaskItem(taskGetResult: any): any {
   const r = taskGetResult?.result;
   if (!r) return null;
   return r.item ?? r.task ?? null;
 }
 
-function resolveTaskChatId(item) {
+function resolveTaskChatId(item: any): number | null {
   if (!item || typeof item !== "object") return null;
   const cid = item.chatId ?? item.CHAT_ID ?? item.chat?.id ?? item.chat?.ID;
   return cid != null && cid !== "" ? Number(cid) : null;
 }
 
-function slimTaskChatMessages(messages) {
+function slimTaskChatMessages(messages: any[]): any[] {
   const list = Array.isArray(messages) ? messages : [];
   return list.map((m) => ({
     id: m.id,
@@ -112,7 +110,7 @@ function slimTaskChatMessages(messages) {
   }));
 }
 
-function slimImUsers(users) {
+function slimImUsers(users: any[]): any[] {
   const list = Array.isArray(users) ? users : [];
   return list.map((u) => ({
     id: u.id,
@@ -122,7 +120,7 @@ function slimImUsers(users) {
   }));
 }
 
-function throwIfBitrixError(data, context) {
+function throwIfBitrixError(data: any, context: string): void {
   if (!data || typeof data !== "object") return;
   if (!Object.prototype.hasOwnProperty.call(data, "error") || data.error == null) return;
   const code = typeof data.error === "object" ? JSON.stringify(data.error) : String(data.error);
@@ -264,8 +262,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_task": {
-        const taskId = Number(args.id);
-        const body = { taskId: args.id, select: args.select || ["*"] };
+        const taskId = Number(args?.id);
+        const body = { taskId: args?.id, select: args?.select || ["*"] };
         const data = await callBitrix("tasks.task.get", body);
         throwIfBitrixError(data, "tasks.task.get");
         const payload = {
@@ -276,13 +274,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "search_tasks": {
-        const hasTitle = args.title != null && String(args.title).trim() !== "";
+        const hasTitle = args?.title != null && String(args.title).trim() !== "";
         const hasStage =
-          args.stage_id !== undefined && args.stage_id !== null && !Number.isNaN(Number(args.stage_id));
+          args?.stage_id !== undefined && args.stage_id !== null && !Number.isNaN(Number(args.stage_id));
         if (!hasTitle && !hasStage) {
           throw new Error("search_tasks requires at least one of: title, stage_id");
         }
-        const filter = {};
+        const filter: any = {};
         if (hasTitle) {
           filter["%TITLE"] = args.title;
         }
@@ -290,10 +288,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           filter.STAGE_ID = Number(args.stage_id);
         }
         const body = {
-          order: { [args.order || "ID"]: (args.dir || "desc").toUpperCase() },
+          order: { [(args?.order as string) || "ID"]: ((args?.dir as string) || "desc").toUpperCase() },
           filter,
           select: ["ID", "TITLE", "STATUS", "RESPONSIBLE_ID", "GROUP_ID", "STAGE_ID"],
-          start: args.start || 0,
+          start: args?.start || 0,
         };
         const data = await callBitrix("tasks.task.list", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
@@ -301,35 +299,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "search_groups": {
         const body = {
-          FILTER: { "%NAME": args.name },
+          FILTER: { "%NAME": args?.name },
         };
         const data = await callBitrix("sonet_group.get.json", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_group": {
-        const body = { FILTER: { ID: args.id } };
+        const body = { FILTER: { ID: args?.id } };
         const data = await callBitrix("sonet_group.get.json", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_kanban_stages_by_group": {
-        const body = { entityId: args.id };
+        const body = { entityId: args?.id };
         const data = await callBitrix("task.stages.get", body);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_task_comments": {
-        const taskId = Number(args.task_id);
+        const taskId = Number(args?.task_id);
         if (!Number.isFinite(taskId) || taskId <= 0) {
           throw new Error("get_task_comments: task_id must be a positive number");
         }
-        const hasFirst = args.first_id !== undefined && args.first_id !== null;
-        const hasLast = args.last_id !== undefined && args.last_id !== null;
+        const hasFirst = args?.first_id !== undefined && args.first_id !== null;
+        const hasLast = args?.last_id !== undefined && args.last_id !== null;
         if (hasFirst && hasLast) {
           throw new Error("get_task_comments: pass only one of first_id or last_id, not both");
         }
-        let limit = args.limit === undefined || args.limit === null ? 20 : Number(args.limit);
+        let limit = args?.limit === undefined || args.limit === null ? 20 : Number(args.limit);
         if (!Number.isFinite(limit)) limit = 20;
         limit = Math.min(IM_MESSAGES_LIMIT_MAX, Math.max(1, Math.floor(limit)));
 
@@ -358,7 +356,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
 
-        const imBody = {
+        const imBody: any = {
           DIALOG_ID: `chat${chatId}`,
           LIMIT: limit,
         };
@@ -401,7 +399,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
-  } catch (error) {
+  } catch (error: any) {
     return {
       content: [{ type: "text", text: `Error: ${error.message}` }],
       isError: true,
