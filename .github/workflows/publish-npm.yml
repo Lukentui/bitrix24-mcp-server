@@ -30,9 +30,9 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Build project
+      - name: Typecheck and build project
         run: pnpm build
 
       - name: Compare local version with npm latest

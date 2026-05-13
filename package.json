@@ -4,6 +4,9 @@
   "description": "Bitrix24 MCP Server for AI Agent Integration.",
   "main": "dist/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "bitrix24-mcp": "dist/index.js"
   },
@@ -14,6 +17,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
     "prepublishOnly": "pnpm build"

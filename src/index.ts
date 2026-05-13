@@ -6,6 +6,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
+import { createRequire } from "node:module";
 
 /**
  * Bitrix24 MCP Server
@@ -15,6 +16,8 @@ import axios from "axios";
  */
 
 const B24_BASE = process.env.B24_BASE;
+const require = createRequire(import.meta.url);
+const packageJson = require("../package.json") as { version: string };
 
 if (!B24_BASE) {
   console.error("Error: B24_BASE environment variable is not set.");
@@ -46,7 +49,7 @@ const mcpInstructions = `Bitrix24 address: ${B24_PORTAL_URL}. ${taskPortalLinkHo
 const server = new Server(
   {
     name: "bitrix24-mcp-server",
-    version: "2.3.3",
+    version: packageJson.version,
   },
   {
     capabilities: {
@@ -56,72 +59,142 @@ const server = new Server(
   }
 );
 
-/**
- * If B24_BASE is legacy .../rest/{user}/{webhook}/ (without /api/), new task fields
- * like chatId are returned from .../rest/api/{user}/{webhook}/ only.
- */
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+type JsonObject = { [key: string]: JsonValue | undefined };
+type ToolArgs = Record<string, unknown>;
+
+type BitrixResponse = JsonObject & {
+  result?: unknown;
+  error?: unknown;
+  error_description?: unknown;
+};
+
+type TaskItem = JsonObject & {
+  chatId?: unknown;
+  CHAT_ID?: unknown;
+  chat?: JsonObject & {
+    id?: unknown;
+    ID?: unknown;
+  };
+};
+
+type SlimTaskChatMessage = {
+  id: unknown;
+  author_id: unknown;
+  text: unknown;
+  date: unknown;
+};
+
+type SlimImUser = {
+  id: unknown;
+  name: unknown;
+  work_position: unknown;
+  email: unknown;
+};
+
+const bitrixBaseUrl = B24_BASE.replace(/\/$/, "");
+
+function asObject(value: unknown): JsonObject | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonObject)
+    : null;
+}
+
+function optionalNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function positiveNumber(value: unknown, fieldName: string): number {
+  const numberValue = optionalNumber(value);
+  if (numberValue === null || numberValue <= 0) {
+    throw new Error(`${fieldName} must be a positive number`);
+  }
+  return numberValue;
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+function stringArrayOrDefault(value: unknown, fallback: string[]): string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? value
+    : fallback;
+}
+
+function requestArgs(args: unknown): ToolArgs {
+  return asObject(args) ?? {};
+}
+
+// If B24_BASE is legacy .../rest/{user}/{webhook}/ (without /api/), new task fields
+// like chatId are returned from .../rest/api/{user}/{webhook}/ only.
 function bitrixRestApiBaseFromLegacy(): string | null {
-  const b = B24_BASE!.replace(/\/$/, "");
+  const b = bitrixBaseUrl;
   if (/\/rest\/api\//.test(b)) return null;
   if (/\/rest\/\d+\//.test(b)) return b.replace("/rest/", "/rest/api/");
   return null;
 }
 
-/**
- * Helper to call Bitrix24 REST API
- * @param {string} [baseUrl] — override base (e.g. rest/api for tasks.task.get)
- */
-async function callBitrix(method: string, body: any, baseUrl?: string): Promise<any> {
-  const url = `${(baseUrl || B24_BASE!).replace(/\/$/, "")}/${method}`;
+async function callBitrix(method: string, body: JsonObject, baseUrl = bitrixBaseUrl): Promise<BitrixResponse> {
+  const url = `${baseUrl.replace(/\/$/, "")}/${method}`;
   try {
     const response = await axios.post(url, body, {
       headers: { "Content-Type": "application/json" },
     });
-    return response.data;
-  } catch (err: any) {
-    const msg = err.response
-      ? `HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`
-      : err.message;
+    return asObject(response.data) ?? { result: response.data as JsonValue };
+  } catch (error: unknown) {
+    const msg = axios.isAxiosError(error) && error.response
+      ? `HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
+      : error instanceof Error
+        ? error.message
+        : String(error);
     throw new Error(msg);
   }
 }
 
 const IM_MESSAGES_LIMIT_MAX = 50;
 
-function pickTaskItem(taskGetResult: any): any {
-  const r = taskGetResult?.result;
-  if (!r) return null;
-  return r.item ?? r.task ?? null;
+function pickTaskItem(taskGetResult: BitrixResponse): TaskItem | null {
+  const result = asObject(taskGetResult.result);
+  if (!result) return null;
+  return asObject(result.item) ?? asObject(result.task) ?? null;
 }
 
-function resolveTaskChatId(item: any): number | null {
-  if (!item || typeof item !== "object") return null;
-  const cid = item.chatId ?? item.CHAT_ID ?? item.chat?.id ?? item.chat?.ID;
-  return cid != null && cid !== "" ? Number(cid) : null;
+function resolveTaskChatId(item: TaskItem | null): number | null {
+  if (!item) return null;
+  return optionalNumber(item.chatId ?? item.CHAT_ID ?? item.chat?.id ?? item.chat?.ID);
 }
 
-function slimTaskChatMessages(messages: any[]): any[] {
+function slimTaskChatMessages(messages: unknown): SlimTaskChatMessage[] {
   const list = Array.isArray(messages) ? messages : [];
-  return list.map((m) => ({
-    id: m.id,
-    author_id: m.author_id,
-    text: m.text,
-    date: m.date,
-  }));
+  return list.map((message) => {
+    const m = asObject(message) ?? {};
+    return {
+      id: m.id,
+      author_id: m.author_id,
+      text: m.text,
+      date: m.date,
+    };
+  });
 }
 
-function slimImUsers(users: any[]): any[] {
+function slimImUsers(users: unknown): SlimImUser[] {
   const list = Array.isArray(users) ? users : [];
-  return list.map((u) => ({
-    id: u.id,
-    name: u.name,
-    work_position: u.work_position ?? null,
-    email: u.email ?? null,
-  }));
+  return list.map((user) => {
+    const u = asObject(user) ?? {};
+    return {
+      id: u.id,
+      name: u.name,
+      work_position: u.work_position ?? null,
+      email: u.email ?? null,
+    };
+  });
 }
 
-function throwIfBitrixError(data: any, context: string): void {
-  if (!data || typeof data !== "object") return;
+function throwIfBitrixError(data: BitrixResponse, context: string): void {
   if (!Object.prototype.hasOwnProperty.call(data, "error") || data.error == null) return;
   const code = typeof data.error === "object" ? JSON.stringify(data.error) : String(data.error);
   const desc = data.error_description != null ? String(data.error_description) : "";
@@ -252,7 +325,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  * Handle tool calls
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  const { name } = request.params;
+  const args = requestArgs(request.params.arguments);
 
   try {
     switch (name) {
@@ -262,8 +336,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_task": {
-        const taskId = Number(args?.id);
-        const body = { taskId: args?.id, select: args?.select || ["*"] };
+        const taskId = positiveNumber(args.id, "get_task: id");
+        const body = { taskId, select: stringArrayOrDefault(args.select, ["*"]) };
         const data = await callBitrix("tasks.task.get", body);
         throwIfBitrixError(data, "tasks.task.get");
         const payload = {
@@ -274,60 +348,73 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "search_tasks": {
-        const hasTitle = args?.title != null && String(args.title).trim() !== "";
-        const hasStage =
-          args?.stage_id !== undefined && args.stage_id !== null && !Number.isNaN(Number(args.stage_id));
+        const title = optionalString(args.title);
+        const stageId = optionalNumber(args.stage_id);
+        const hasStageInput = args.stage_id !== undefined && args.stage_id !== null;
+        const hasTitle = title !== null;
+        const hasStage = hasStageInput && stageId !== null;
+        if (hasStageInput && stageId === null) {
+          throw new Error("search_tasks: stage_id must be a number");
+        }
         if (!hasTitle && !hasStage) {
           throw new Error("search_tasks requires at least one of: title, stage_id");
         }
-        const filter: any = {};
+        const filter: JsonObject = {};
         if (hasTitle) {
-          filter["%TITLE"] = args.title;
+          filter["%TITLE"] = title;
         }
         if (hasStage) {
-          filter.STAGE_ID = Number(args.stage_id);
+          filter.STAGE_ID = stageId;
         }
+        const orderField = optionalString(args.order) ?? "ID";
+        const direction = optionalString(args.dir)?.toLowerCase() === "asc" ? "ASC" : "DESC";
+        const start = optionalNumber(args.start) ?? 0;
         const body = {
-          order: { [(args?.order as string) || "ID"]: ((args?.dir as string) || "desc").toUpperCase() },
+          order: { [orderField]: direction },
           filter,
           select: ["ID", "TITLE", "STATUS", "RESPONSIBLE_ID", "GROUP_ID", "STAGE_ID"],
-          start: args?.start || 0,
+          start,
         };
         const data = await callBitrix("tasks.task.list", body);
+        throwIfBitrixError(data, "tasks.task.list");
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "search_groups": {
+        const name = optionalString(args.name);
+        if (!name) {
+          throw new Error("search_groups: name must be a non-empty string");
+        }
         const body = {
-          FILTER: { "%NAME": args?.name },
+          FILTER: { "%NAME": name },
         };
         const data = await callBitrix("sonet_group.get.json", body);
+        throwIfBitrixError(data, "sonet_group.get.json");
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_group": {
-        const body = { FILTER: { ID: args?.id } };
+        const body = { FILTER: { ID: positiveNumber(args.id, "get_group: id") } };
         const data = await callBitrix("sonet_group.get.json", body);
+        throwIfBitrixError(data, "sonet_group.get.json");
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_kanban_stages_by_group": {
-        const body = { entityId: args?.id };
+        const body = { entityId: positiveNumber(args.id, "get_kanban_stages_by_group: id") };
         const data = await callBitrix("task.stages.get", body);
+        throwIfBitrixError(data, "task.stages.get");
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "get_task_comments": {
-        const taskId = Number(args?.task_id);
-        if (!Number.isFinite(taskId) || taskId <= 0) {
-          throw new Error("get_task_comments: task_id must be a positive number");
-        }
-        const hasFirst = args?.first_id !== undefined && args.first_id !== null;
-        const hasLast = args?.last_id !== undefined && args.last_id !== null;
+        const taskId = positiveNumber(args.task_id, "get_task_comments: task_id");
+        const hasFirst = args.first_id !== undefined && args.first_id !== null;
+        const hasLast = args.last_id !== undefined && args.last_id !== null;
         if (hasFirst && hasLast) {
           throw new Error("get_task_comments: pass only one of first_id or last_id, not both");
         }
-        let limit = args?.limit === undefined || args.limit === null ? 20 : Number(args.limit);
+        let limit = args.limit === undefined || args.limit === null ? 20 : Number(args.limit);
         if (!Number.isFinite(limit)) limit = 20;
         limit = Math.min(IM_MESSAGES_LIMIT_MAX, Math.max(1, Math.floor(limit)));
 
@@ -356,19 +443,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
 
-        const imBody: any = {
+        const imBody: JsonObject = {
           DIALOG_ID: `chat${chatId}`,
           LIMIT: limit,
         };
-        if (hasFirst) imBody.FIRST_ID = Number(args.first_id);
-        if (hasLast) imBody.LAST_ID = Number(args.last_id);
+        if (hasFirst) imBody.FIRST_ID = positiveNumber(args.first_id, "get_task_comments: first_id");
+        if (hasLast) imBody.LAST_ID = positiveNumber(args.last_id, "get_task_comments: last_id");
 
         const imRaw = await callBitrix("im.dialog.messages.get", imBody);
         throwIfBitrixError(imRaw, "im.dialog.messages.get");
-        const imResult = imRaw.result || {};
-        const rawMessages = Array.isArray(imResult.messages) ? imResult.messages : [];
-        const slimMessages = slimTaskChatMessages(rawMessages);
-        const ids = slimMessages.map((m) => m.id).filter((id) => typeof id === "number");
+        const imResult = asObject(imRaw.result) ?? {};
+        const slimMessages = slimTaskChatMessages(imResult.messages);
+        const ids = slimMessages
+          .map((message) => optionalNumber(message.id))
+          .filter((id): id is number => id !== null);
         const minId = ids.length ? Math.min(...ids) : null;
         const maxId = ids.length ? Math.max(...ids) : null;
 
@@ -399,9 +487,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
-      content: [{ type: "text", text: `Error: ${error.message}` }],
+      content: [{ type: "text", text: `Error: ${message}` }],
       isError: true,
     };
   }
