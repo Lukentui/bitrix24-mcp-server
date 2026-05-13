@@ -1,6 +1,6 @@
 {
   "name": "@x0333/bitrix24-mcp-server",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Bitrix24 MCP Server for AI Agent Integration.",
   "main": "dist/index.js",
   "type": "module",
@@ -24,8 +24,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "axios": "^1.5.0"
+    "axios": "^1.5.0",
+    "fastmcp": "^4.0.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
