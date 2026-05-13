@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "module": "NodeNext",
+    "target": "ES2022",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "sourceMap": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "allowJs": false,
+    "types": ["node"]
+  },
+  "include": ["src/**/*"]
+}

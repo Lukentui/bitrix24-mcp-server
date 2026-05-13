@@ -2,7 +2,7 @@ name: Publish to npm
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, main-typescript]
     paths:
       - "package.json"
   workflow_dispatch:
@@ -19,16 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build project
+        run: pnpm build
 
       - name: Compare local version with npm latest
         id: version
         run: |
           set -euo pipefail
-          LOCAL=$(node -p "require('./package.json').version")
+          LOCAL=$(node -p "require('./package.json' ).version")
           NAME=$(node -p "require('./package.json').name")
           NPM_VER=$(npm view "$NAME" version 2>/dev/null || echo "0.0.0")
           echo "Package: $NAME"
@@ -45,6 +56,6 @@ jobs:
 
       - name: npm publish
         if: steps.version.outputs.should_publish == 'true'
-        run: npm publish --access public
+        run: pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
