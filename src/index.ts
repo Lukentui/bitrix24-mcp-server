@@ -267,34 +267,54 @@ server.addTool({
 
 server.addTool({
   annotations: { readOnlyHint: true, openWorldHint: true },
-  description: "Retrieve detailed information about a workgroup or project by ID",
+  description:
+    "Retrieve information about one or more workgroups or projects by ID (up to 10 IDs per call).",
   name: "get_group",
   parameters: z.object({
-    id: z.number().positive().describe("The unique ID of the group"),
+    ids: z
+      .array(z.number().positive())
+      .min(1)
+      .max(10)
+      .describe("One or more group IDs (1–10 per request)"),
   }),
-  execute: async ({ id }) => {
+  execute: async ({ ids }) => {
+    const groupIds = [...new Set(ids.map((id) => positiveNumber(id, "get_group: ids[]")))];
     const data = await callBitrix("sonet_group.get.json", {
-      FILTER: { ID: positiveNumber(id, "get_group: id") },
+      FILTER: { ID: groupIds },
     });
     throwIfBitrixError(data, "sonet_group.get.json");
-    return jsonText(data);
+    const groups = Array.isArray(data.result) ? data.result : [];
+    return jsonText({ groups });
   },
 });
 
 server.addTool({
   annotations: { readOnlyHint: true, openWorldHint: true },
   description:
-    "Get task Kanban stages for a workgroup or project (task.stages.get). entityId is the group ID.",
+    "Get task Kanban stages for one or more workgroups or projects (task.stages.get, up to 10 group IDs per call). entityId is the group ID.",
   name: "get_kanban_stages_by_group",
   parameters: z.object({
-    id: z.number().positive().describe("The unique ID of the group (entityId for task kanban)"),
+    ids: z
+      .array(z.number().positive())
+      .min(1)
+      .max(10)
+      .describe("One or more group IDs (1–10 per request, entityId for task kanban)"),
   }),
-  execute: async ({ id }) => {
-    const data = await callBitrix("task.stages.get", {
-      entityId: positiveNumber(id, "get_kanban_stages_by_group: id"),
-    });
-    throwIfBitrixError(data, "task.stages.get");
-    return jsonText(data);
+  execute: async ({ ids }) => {
+    const groupIds = [
+      ...new Set(ids.map((id) => positiveNumber(id, "get_kanban_stages_by_group: ids[]"))),
+    ];
+    const kanbanStages = await Promise.all(
+      groupIds.map(async (groupId) => {
+        const data = await callBitrix("task.stages.get", { entityId: groupId });
+        throwIfBitrixError(data, `task.stages.get (entityId=${groupId})`);
+        return {
+          group_id: groupId,
+          stages: data.result ?? {},
+        };
+      }),
+    );
+    return jsonText({ kanban_stages: kanbanStages });
   },
 });
 
