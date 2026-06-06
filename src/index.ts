@@ -181,7 +181,7 @@ const server = new FastMCP({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Профиль пользователя", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description: "Fetch current user profile information from Bitrix24",
   name: "get_profile",
   parameters: z.object({}),
@@ -193,7 +193,7 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Задача по ID", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description:
     "Retrieve task details by ID from Bitrix24. " +
     taskPortalLinkHowto +
@@ -218,7 +218,7 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Поиск задач", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description:
     "Search tasks in Bitrix24: by title substring (%TITLE), by Kanban stage id (filter STAGE_ID), or both.",
   name: "search_tasks",
@@ -250,7 +250,7 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Поиск групп", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description: "Search for workgroups or projects by name in Bitrix24",
   name: "search_groups",
   parameters: z.object({
@@ -266,7 +266,7 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Группы по ID", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description:
     "Retrieve information about one or more workgroups or projects by ID (up to 10 IDs per call).",
   name: "get_group",
@@ -289,7 +289,7 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Стадии канбана", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description:
     "Get task Kanban stages for one or more workgroups or projects (task.stages.get, up to 10 group IDs per call). entityId is the group ID.",
   name: "get_kanban_stages_by_group",
@@ -319,7 +319,7 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { title: "Б24 Комментарии к задаче", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   description:
     "Comments for a task on the new task card (module tasks 25.700.0+): messages come from the task chat via im.dialog.messages.get, newest first when no cursors are passed. " +
     "Arrays are trimmed: messages only id, author_id, text, date; users only id, name, work_position, email. " +
