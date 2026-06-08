@@ -6,11 +6,15 @@ import { z } from "zod";
 
 const B24_BASE = process.env.B24_BASE;
 const require = createRequire(import.meta.url);
-const packageJson = require("../package.json") as { version: `${number}.${number}.${number}` };
+const packageJson = require("../package.json") as {
+  version: `${number}.${number}.${number}`;
+};
 
 if (!B24_BASE) {
   console.error("Error: B24_BASE environment variable is not set.");
-  console.error("Please set it to your Bitrix24 webhook URL (e.g., https://domain.bitrix24.ru/rest/1/abcde/).");
+  console.error(
+    "Please set it to your Bitrix24 webhook URL (e.g., https://domain.bitrix24.ru/rest/1/abcde/).",
+  );
   process.exit(1);
 }
 
@@ -26,13 +30,14 @@ function bitrixPortalUrlFromBase(base: string): string | null {
 
 const B24_PORTAL_URL = bitrixPortalUrlFromBase(B24_BASE);
 if (!B24_PORTAL_URL) {
-  console.error("Error: B24_BASE must be a valid absolute URL with a host (e.g., https://domain.bitrix24.ru/rest/1/abcde/).");
+  console.error(
+    "Error: B24_BASE must be a valid absolute URL with a host (e.g., https://domain.bitrix24.ru/rest/1/abcde/).",
+  );
   process.exit(1);
 }
 
 const taskViewUrlPrefix = `${B24_PORTAL_URL}/company/personal/user/0/tasks/task/view/`;
-const taskPortalLinkHowto =
-  `When the user needs a link to a task (or to paste one), use ${taskViewUrlPrefix}<task-id>/ — substitute only <task-id> with the numeric task ID from the API. Example: ${taskViewUrlPrefix}9483/`;
+const taskPortalLinkHowto = `When the user needs a link to a task (or to paste one), use ${taskViewUrlPrefix}<task-id>/ — substitute only <task-id> with the numeric task ID from the API. Example: ${taskViewUrlPrefix}9483/`;
 const mcpInstructions = `Bitrix24 address: ${B24_PORTAL_URL}. ${taskPortalLinkHowto}`;
 
 type JsonPrimitive = string | number | boolean | null;
@@ -112,7 +117,11 @@ function bitrixRestApiBaseFromLegacy(): string | null {
   return null;
 }
 
-async function callBitrix(method: string, body: JsonObject, baseUrl = bitrixBaseUrl): Promise<BitrixResponse> {
+async function callBitrix(
+  method: string,
+  body: JsonObject,
+  baseUrl = bitrixBaseUrl,
+): Promise<BitrixResponse> {
   const url = `${baseUrl.replace(/\/$/, "")}/${method}`;
   try {
     const response = await axios.post(url, body, {
@@ -120,11 +129,12 @@ async function callBitrix(method: string, body: JsonObject, baseUrl = bitrixBase
     });
     return asObject(response.data) ?? { result: response.data as JsonValue };
   } catch (error: unknown) {
-    const msg = axios.isAxiosError(error) && error.response
-      ? `HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
-      : error instanceof Error
-        ? error.message
-        : String(error);
+    const msg =
+      axios.isAxiosError(error) && error.response
+        ? `HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
+        : error instanceof Error
+          ? error.message
+          : String(error);
     throw new Error(msg);
   }
 }
@@ -137,7 +147,9 @@ function pickTaskItem(taskGetResult: BitrixResponse): TaskItem | null {
 
 function resolveTaskChatId(item: TaskItem | null): number | null {
   if (!item) return null;
-  return optionalNumber(item.chatId ?? item.CHAT_ID ?? item.chat?.id ?? item.chat?.ID);
+  return optionalNumber(
+    item.chatId ?? item.CHAT_ID ?? item.chat?.id ?? item.chat?.ID,
+  );
 }
 
 function slimTaskChatMessages(messages: unknown): SlimTaskChatMessage[] {
@@ -167,9 +179,17 @@ function slimImUsers(users: unknown): SlimImUser[] {
 }
 
 function throwIfBitrixError(data: BitrixResponse, context: string): void {
-  if (!Object.prototype.hasOwnProperty.call(data, "error") || data.error == null) return;
-  const code = typeof data.error === "object" ? JSON.stringify(data.error) : String(data.error);
-  const desc = data.error_description != null ? String(data.error_description) : "";
+  if (
+    !Object.prototype.hasOwnProperty.call(data, "error") ||
+    data.error == null
+  )
+    return;
+  const code =
+    typeof data.error === "object"
+      ? JSON.stringify(data.error)
+      : String(data.error);
+  const desc =
+    data.error_description != null ? String(data.error_description) : "";
   throw new Error(`${context}: ${code}${desc ? ` — ${desc}` : ""}`);
 }
 
@@ -181,7 +201,12 @@ const server = new FastMCP({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Профиль пользователя", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Профиль пользователя",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description: "Fetch current user profile information from Bitrix24",
   name: "get_profile",
   parameters: z.object({}),
@@ -193,7 +218,12 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Задача по ID", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Задача по ID",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     "Retrieve task details by ID from Bitrix24. " +
     taskPortalLinkHowto +
@@ -201,7 +231,10 @@ server.addTool({
   name: "get_task",
   parameters: z.object({
     id: z.number().positive().describe("The unique ID of the task"),
-    select: z.array(z.string()).optional().describe("Fields to return (default: ['*'])"),
+    select: z
+      .array(z.string())
+      .optional()
+      .describe("Fields to return (default: ['*'])"),
   }),
   execute: async ({ id, select }) => {
     const taskId = positiveNumber(id, "get_task: id");
@@ -218,16 +251,41 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Поиск задач", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Поиск задач",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     "Search tasks in Bitrix24: by title substring (%TITLE), by Kanban stage id (filter STAGE_ID), or both.",
   name: "search_tasks",
   parameters: z.object({
-    title: z.string().trim().min(1).optional().describe("Substring of the task title to search for"),
-    stage_id: z.number().optional().describe("Kanban stage ID (tasks.task.list filter STAGE_ID)"),
-    order: z.string().trim().min(1).default("ID").describe("Field to sort by (default: 'ID')"),
-    dir: z.enum(["asc", "desc"]).default("desc").describe("Sort direction (default: 'desc')"),
-    start: z.number().nonnegative().default(0).describe("Pagination offset (default: 0)"),
+    title: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe("Substring of the task title to search for"),
+    stage_id: z
+      .number()
+      .optional()
+      .describe("Kanban stage ID (tasks.task.list filter STAGE_ID)"),
+    order: z
+      .string()
+      .trim()
+      .min(1)
+      .default("ID")
+      .describe("Field to sort by (default: 'ID')"),
+    dir: z
+      .enum(["asc", "desc"])
+      .default("desc")
+      .describe("Sort direction (default: 'desc')"),
+    start: z
+      .number()
+      .nonnegative()
+      .default(0)
+      .describe("Pagination offset (default: 0)"),
   }),
   execute: async ({ title, stage_id, order, dir, start }) => {
     if (!title && stage_id === undefined) {
@@ -241,7 +299,14 @@ server.addTool({
     const data = await callBitrix("tasks.task.list", {
       order: { [order]: dir.toUpperCase() },
       filter,
-      select: ["ID", "TITLE", "STATUS", "RESPONSIBLE_ID", "GROUP_ID", "STAGE_ID"],
+      select: [
+        "ID",
+        "TITLE",
+        "STATUS",
+        "RESPONSIBLE_ID",
+        "GROUP_ID",
+        "STAGE_ID",
+      ],
       start,
     });
     throwIfBitrixError(data, "tasks.task.list");
@@ -250,11 +315,20 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Поиск групп", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Поиск групп",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description: "Search for workgroups or projects by name in Bitrix24",
   name: "search_groups",
   parameters: z.object({
-    name: z.string().trim().min(1).describe("Substring of the group name to search for"),
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .describe("Substring of the group name to search for"),
   }),
   execute: async ({ name }) => {
     const data = await callBitrix("sonet_group.get.json", {
@@ -266,7 +340,12 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Группы по ID", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Группы по ID",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     "Retrieve information about one or more workgroups or projects by ID (up to 10 IDs per call).",
   name: "get_group",
@@ -278,7 +357,9 @@ server.addTool({
       .describe("One or more group IDs (1–10 per request)"),
   }),
   execute: async ({ ids }) => {
-    const groupIds = [...new Set(ids.map((id) => positiveNumber(id, "get_group: ids[]")))];
+    const groupIds = [
+      ...new Set(ids.map((id) => positiveNumber(id, "get_group: ids[]"))),
+    ];
     const data = await callBitrix("sonet_group.get.json", {
       FILTER: { ID: groupIds },
     });
@@ -289,7 +370,12 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Стадии канбана", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Стадии канбана",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     "Get task Kanban stages for one or more workgroups or projects (task.stages.get, up to 10 group IDs per call). entityId is the group ID.",
   name: "get_kanban_stages_by_group",
@@ -298,11 +384,17 @@ server.addTool({
       .array(z.number().positive())
       .min(1)
       .max(10)
-      .describe("One or more group IDs (1–10 per request, entityId for task kanban)"),
+      .describe(
+        "One or more group IDs (1–10 per request, entityId for task kanban)",
+      ),
   }),
   execute: async ({ ids }) => {
     const groupIds = [
-      ...new Set(ids.map((id) => positiveNumber(id, "get_kanban_stages_by_group: ids[]"))),
+      ...new Set(
+        ids.map((id) =>
+          positiveNumber(id, "get_kanban_stages_by_group: ids[]"),
+        ),
+      ),
     ];
     const kanbanStages = await Promise.all(
       groupIds.map(async (groupId) => {
@@ -319,7 +411,12 @@ server.addTool({
 });
 
 server.addTool({
-  annotations: { title: "Б24 Комментарии к задаче", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: {
+    title: "Б24 Комментарии к задаче",
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     "Comments for a task on the new task card (module tasks 25.700.0+): messages come from the task chat via im.dialog.messages.get, newest first when no cursors are passed. " +
     "Arrays are trimmed: messages only id, author_id, text, date; users only id, name, work_position, email. " +
@@ -330,16 +427,35 @@ server.addTool({
   name: "get_task_comments",
   parameters: z.object({
     task_id: z.number().positive().describe("Task ID"),
-    limit: z.number().int().min(1).max(IM_MESSAGES_LIMIT_MAX).default(20)
-      .describe(`Page size (1–${IM_MESSAGES_LIMIT_MAX}, default 20). Bitrix im.dialog.messages.get LIMIT`),
-    first_id: z.number().positive().optional()
-      .describe("Optional. Bitrix FIRST_ID: load messages older than this id (next page toward history). Typically set to the smallest message id from the previous response."),
-    last_id: z.number().positive().optional()
-      .describe("Optional. Bitrix LAST_ID: load messages newer than this id. Do not combine with first_id."),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(IM_MESSAGES_LIMIT_MAX)
+      .default(20)
+      .describe(
+        `Page size (1–${IM_MESSAGES_LIMIT_MAX}, default 20). Bitrix im.dialog.messages.get LIMIT`,
+      ),
+    first_id: z
+      .number()
+      .positive()
+      .optional()
+      .describe(
+        "Optional. Bitrix FIRST_ID: load messages older than this id (next page toward history). Typically set to the smallest message id from the previous response.",
+      ),
+    last_id: z
+      .number()
+      .positive()
+      .optional()
+      .describe(
+        "Optional. Bitrix LAST_ID: load messages newer than this id. Do not combine with first_id.",
+      ),
   }),
   execute: async ({ task_id, limit, first_id, last_id }) => {
     if (first_id !== undefined && last_id !== undefined) {
-      throw new Error("get_task_comments: pass only one of first_id or last_id, not both");
+      throw new Error(
+        "get_task_comments: pass only one of first_id or last_id, not both",
+      );
     }
 
     const taskId = positiveNumber(task_id, "get_task_comments: task_id");
@@ -357,7 +473,7 @@ server.addTool({
       taskRaw = await callBitrix(
         "tasks.task.get",
         { id: taskId, select: taskSelect },
-        apiBase
+        apiBase,
       );
       throwIfBitrixError(taskRaw, "tasks.task.get (rest/api)");
       item = pickTaskItem(taskRaw);
@@ -366,7 +482,7 @@ server.addTool({
 
     if (!chatId) {
       throw new Error(
-        "get_task_comments: task has no chatId (new-card comments unavailable, no access, or set B24_BASE to .../rest/api/...)"
+        "get_task_comments: task has no chatId (new-card comments unavailable, no access, or set B24_BASE to .../rest/api/...)",
       );
     }
 
@@ -401,13 +517,41 @@ server.addTool({
           last_id === undefined && slimMessages.length > 0 ? minId : null,
         suggested_next_last_id:
           first_id === undefined && slimMessages.length > 0 ? maxId : null,
-        note:
-          "If suggested_next_first_id is set and you need older messages, call again with first_id equal to that value. If suggested_next_last_id is set and you need newer messages, call again with last_id equal to that value. Empty page or short page means no more in that direction (heuristic).",
+        note: "If suggested_next_first_id is set and you need older messages, call again with first_id equal to that value. If suggested_next_last_id is set and you need newer messages, call again with last_id equal to that value. Empty page or short page means no more in that direction (heuristic).",
       },
       agent_instructions:
         "author_id 0 — это системные сообщения чата Битрикс24 (смена стадии, учёт времени, приглашения и т.п.), а не пользовательский комментарий; не ищи для них запись в users. " +
         "Для author_id > 0 сопоставь author_id с users[].id и бери имя/должность из найденного user. Текст сообщения в messages[].text.",
     });
+  },
+});
+
+server.addTool({
+  annotations: {
+    title: "Б24 Передвинуть задачу по канбану",
+    readOnlyHint: false,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
+  description:
+  "Используй этот инструмент если пользователь просит передвинуть карточку, двинуть таску или сменить стадию канбана задачи. " +
+  "Use get_kanban_stages_by_group with the task GROUP_ID to list valid stage_id values (keys in stages). ",
+  name: "set_task_kanban_stage",
+  parameters: z.object({
+    task_id: z.number().positive().describe("Task ID"),
+    stage_id: z
+      .number()
+      .positive()
+      .describe("Target Kanban stage ID (task.stages.movetask stageId)"),
+  }),
+  execute: async ({ task_id, stage_id }) => {
+    const data = await callBitrix("task.stages.movetask", {
+      id: task_id,
+      stageId: stage_id,
+    });
+    throwIfBitrixError(data, "task.stages.movetask");
+    
+    return jsonText(data);
   },
 });
 
