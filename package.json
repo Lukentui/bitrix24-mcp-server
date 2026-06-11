@@ -1,6 +1,6 @@
 {
   "name": "@x0333/bitrix24-mcp-server",
-  "version": "2.7.0",
+  "version": "3.0.1",
   "description": "Bitrix24 MCP Server for AI Agent Integration.",
   "main": "dist/index.js",
   "type": "module",

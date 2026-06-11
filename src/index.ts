@@ -207,8 +207,8 @@ server.addTool({
     destructiveHint: false,
     openWorldHint: false,
   },
-  description: "Fetch current user profile information from Bitrix24",
-  name: "get_profile",
+  description: "Fetch current user profile (webhook owner) from Bitrix24",
+  name: "get_me",
   parameters: z.object({}),
   execute: async () => {
     const data = await callBitrix("profile", {});
@@ -225,28 +225,36 @@ server.addTool({
     openWorldHint: false,
   },
   description:
-    "Retrieve task details by ID from Bitrix24. " +
+    "Retrieve task details by one or more IDs (up to 10 per call) from Bitrix24. " +
+    "Always returns all task fields. " +
     taskPortalLinkHowto +
-    " The tool response JSON includes agent_instructions with the same rule plus a direct link for the requested task id.",
+    " The tool response JSON includes agent_instructions with the same rule plus a direct link for each requested task id.",
   name: "get_task",
   parameters: z.object({
-    id: z.number().positive().describe("The unique ID of the task"),
-    select: z
-      .array(z.string())
-      .optional()
-      .describe("Fields to return (default: ['*'])"),
+    id: z
+      .array(z.number().positive())
+      .min(1)
+      .max(10)
+      .describe("One or more task IDs (1–10 per request)"),
   }),
-  execute: async ({ id, select }) => {
-    const taskId = positiveNumber(id, "get_task: id");
-    const data = await callBitrix("tasks.task.get", {
-      taskId,
-      select: select ?? ["*"],
-    });
-    throwIfBitrixError(data, "tasks.task.get");
-    return jsonText({
-      ...data,
-      agent_instructions: `${taskPortalLinkHowto} For this task: ${taskViewUrlPrefix}${taskId}/`,
-    });
+  execute: async ({ id }) => {
+    const taskIds = [
+      ...new Set(id.map((taskId) => positiveNumber(taskId, "get_task: id[]"))),
+    ];
+    const tasks = await Promise.all(
+      taskIds.map(async (taskId) => {
+        const data = await callBitrix("tasks.task.get", {
+          taskId,
+          select: ["*"],
+        });
+        throwIfBitrixError(data, `tasks.task.get (taskId=${taskId})`);
+        return {
+          ...data,
+          agent_instructions: `${taskPortalLinkHowto} For this task: ${taskViewUrlPrefix}${taskId}/`,
+        };
+      }),
+    );
+    return jsonText({ tasks });
   },
 });
 
